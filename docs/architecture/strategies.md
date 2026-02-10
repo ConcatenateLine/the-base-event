@@ -61,9 +61,9 @@ const emitter = new EventEmitter({
 
 ## 📁 **Documentation Links**
 
-- [LRU Strategy](./lru.md) - Detailed implementation
-- [FIFO Strategy](./fifo.md) - Simple queue behavior
-- [Priority Strategy](./priority.md) - Critical event handling
+- [LRU Strategy](./strategies/lru.md) - Detailed implementation
+- [FIFO Strategy](./strategies/fifo.md) - Simple queue behavior
+- [Priority Strategy](./strategies/priority.md) - Critical event handling
 
 ---
 

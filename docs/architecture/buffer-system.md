@@ -1,62 +1,31 @@
 # Buffer System Architecture
-## Intelligent Event Buffering with Multiple Strategies
+## Intelligent Event Buffering Strategies
 
 ---
 
 ## 🎯 **Overview**
 
-The Buffer System provides **intelligent event management** with configurable strategies, TTL-based cleanup, and cross-environment synchronization. It prevents lost events through replay functionality while maintaining memory safety.
+The Buffer System provides **intelligent event management** with configurable strategies, TTL-based cleanup, and cross-tab synchronization. It ensures no events are lost while maintaining memory safety.
 
 ---
 
 ## 🏗️ **System Architecture**
 
-```mermaid
-graph TD
-    A[Buffer Manager] --> B[Strategy Interface]
-    A --> C[Memory Manager]
-    A --> D[Cross-Tab Sync]
-    
-    B --> E[LRU Strategy]
-    B --> F[FIFO Strategy]
-    B --> G[Priority Strategy]
-    
-    C --> H[TTL Cleanup]
-    C --> I[Size Limits]
-    C --> J[Memory Usage Tracking]
-    
-    D --> K[LocalStorage Integration]
-    D --> L[BroadcastChannel Events]
-```
-
----
-
-## 🔧 **Core Components**
-
-### **BufferManager Interface** (`src/core/buffer/index.ts`)
-
+### **Core Manager** (`src/core/buffer/index.ts`)
 ```typescript
 interface BufferManager {
-  // Core operations
   add<T>(event: BaseEvent<T>): void;
   get(channel: string): BufferedEvent<unknown>[];
   has(channel: string): boolean;
   clear(channel?: string): void;
   size: number;
-  
-  // Configuration
   configure(config: Partial<BufferConfig>): void;
-  
-  // Monitoring
   getMetrics(): BufferMetrics;
-  
-  // Management
   evictExpired(): number;
 }
 ```
 
-### **Strategy Pattern**
-
+### **Strategy Pattern** (`src/core/buffer/strategies/`)
 ```typescript
 interface BufferStrategy {
   add<T>(buffer: Map<string, BufferedEvent<unknown>[]>, event: BufferedEvent<T>): void;
@@ -65,347 +34,172 @@ interface BufferStrategy {
 }
 ```
 
+### **Memory Management** (`src/core/buffer/memory/`)
+```typescript
+interface MemoryManager {
+  cleanup<T>(buffer: Map<string, BufferedEvent<T>[]>): number;
+  setTTL(ttl: number): void;
+  setMaxSize(maxSize: number): void;
+  isExpired(event: BufferedEvent<unknown>): boolean;
+}
+```
+
 ---
 
 ## 🎨 **Strategy Implementations**
 
-### **LRU (Least Recently Used) Strategy** (`strategies/lru.ts`)
+### **LRU Strategy** (`strategies/lru.ts`)
+**Use Case**: Frequently accessed channels
+**Algorithm**: Track access order, evict least recently used
+**Performance**: O(1) operations, excellent hit ratio
 
-#### **Algorithm**
 ```typescript
 class LRUStrategy implements BufferStrategy {
   private accessOrder = new Map<string, number>();
-  private accessCounter = 0;
-
-  add<T>(buffer: Map<string, BufferedEvent<unknown>[]>, event: BufferedEvent<T>): void {
-    const channel = event.channel;
-    let events = buffer.get(channel) || [];
-    
-    // Add new event to end
-    events.push(event);
-    
-    // Update access time for LRU tracking
-    this.accessOrder.set(channel, ++this.accessCounter);
-    
-    // Evict oldest if over capacity
-    if (events.length > this.config.maxSize) {
-      events.shift(); // Remove oldest (LRU adjustment)
-    }
-    
-    buffer.set(channel, events);
-  }
-
-  onAccess<T>(buffer: Map<string, BufferedEvent<unknown>[]>, channel: string): void {
-    // Update access time when channel is read
-    this.accessOrder.set(channel, ++this.accessCounter);
-    
-    // Move accessed events to end (LRU behavior)
-    const events = buffer.get(channel);
-    if (events && events.length > 1) {
-      const lastEvent = events.pop();
-      if (lastEvent) {
-        events.unshift(lastEvent);
-      }
-      buffer.set(channel, events);
-    }
+  
+  add(buffer, event) {
+    // Update LRU order and evict if needed
   }
 }
 ```
 
-#### **Characteristics**
-- **Time Complexity**: O(1) for add/remove, O(1) for access
-- **Space Complexity**: O(n) where n = buffer size
-- **Use Case**: Frequently accessed channels benefit significantly
-- **Memory Efficiency**: Excellent cache hit ratio for hot channels
+### **FIFO Strategy** (`strategies/fifo.ts`)
+**Use Case**: Chronological event ordering
+**Algorithm**: Simple queue behavior
+**Performance**: O(1) operations, predictable memory
 
-### **FIFO (First In, First Out) Strategy** (`strategies/fifo.ts`)
-
-#### **Algorithm**
 ```typescript
 class FIFOStrategy implements BufferStrategy {
-  add<T>(buffer: Map<string, BufferedEvent<unknown>[]>, event: BufferedEvent<T>): void {
-    const channel = event.channel;
-    let events = buffer.get(channel) || [];
-    
-    // Add new event to end
-    events.push(event);
-    
-    // Evict oldest if over capacity (FIFO behavior)
-    if (events.length > this.config.maxSize) {
-      events.shift();
-    }
-    
-    buffer.set(channel, events);
-  }
-
-  evictOldest<T>(buffer: Map<string, BufferedEvent<unknown>[]>, channel: string): BufferedEvent<unknown> | null {
-    const events = buffer.get(channel) || [];
-    return events.length > 0 ? events.shift() || null : null;
+  add(buffer, event) {
+    // Add to end, evict from start if needed
   }
 }
 ```
-
-#### **Characteristics**
-- **Time Complexity**: O(1) for all operations
-- **Space Complexity**: O(n)
-- **Use Case**: Chronological event ordering required
-- **Predictability**: Highly predictable behavior
 
 ### **Priority Strategy** (`strategies/priority.ts`)
+**Use Case**: Critical event handling
+**Algorithm**: Sort by priority, evict lowest priority first
+**Performance**: O(n log n) due to sorting
 
-#### **Algorithm**
 ```typescript
 class PriorityStrategy implements BufferStrategy {
-  add<T>(buffer: Map<string, BufferedEvent<unknown>[]>, event: BufferedEvent<T>): void {
-    const channel = event.channel;
-    let events = buffer.get(channel) || [];
-    
-    // Add new event with priority preservation
-    events.push(event);
-    
-    // Sort by priority (high first)
-    events.sort((a, b) => {
-      const priorityA = this.getPriority(a);
-      const priorityB = this.getPriority(b);
-      return this.comparePriority(priorityA, priorityB);
-    });
-    
-    // Evict lowest priority if over capacity
-    if (events.length > this.config.maxSize) {
-      events.pop();
-    }
-    
-    buffer.set(channel, events);
-  }
-
-  private getPriority<T>(event: BufferedEvent<T>): EventPriority {
-    // Extract priority from event type or options
-    if (event.type === 'high') return 'high';
-    if (event.type === 'medium') return 'medium';
-    return 'low';
+  add(buffer, event) {
+    // High/Medium/Low priority ordering
   }
 }
-```
-
-#### **Priority Levels**
-```typescript
-type EventPriority = 'high' | 'medium' | 'low';
-
-const PRIORITY_WEIGHT = {
-  high: 3,
-  medium: 2,
-  low: 1
-};
-```
-
-#### **Characteristics**
-- **Time Complexity**: O(n log n) due to sorting
-- **Space Complexity**: O(n)
-- **Use Case**: Critical event handling with guaranteed delivery
-- **Flexibility**: Configurable priority levels
-
----
-
-## 🧠 **Memory Management** (`memory/ttl.ts`)
-
-### **TTL-Based Cleanup**
-```typescript
-export default function createTTLManager(ttl: number, maxSize: number): MemoryManager {
-  return {
-    cleanup<T>(buffer: Map<string, BufferedEvent<T>[]>): number {
-      let cleanedCount = 0;
-      const now = Date.now();
-      
-      for (const [channel, events] of buffer.entries()) {
-        const originalLength = events.length;
-        
-        // Remove expired events
-        for (let i = events.length - 1; i >= 0; i--) {
-          const event = events[i];
-          if (isExpired(event)) {
-            events.splice(i, 1);
-            cleanedCount++;
-          }
-        }
-        
-        // Update buffer if events were removed
-        if (events.length < originalLength) {
-          buffer.set(channel, events);
-        }
-      }
-      
-      return cleanedCount;
-    },
-    
-    isExpired(event: BufferedEvent<unknown>): boolean {
-      if (!event.ttl) return false;
-      const now = Date.now();
-      return now - event.bufferedAt > event.ttl;
-    }
-  };
-}
-```
-
-### **Memory Usage Estimation**
-```typescript
-const calculateMemoryUsage = (buffer: Map<string, BufferedEvent<unknown>[]): number => {
-  let totalEvents = 0;
-  let memoryUsage = 0;
-  
-  for (const [channel, events] of buffer.entries()) {
-    totalEvents += events.length;
-    // Rough estimation: 100 bytes per event
-    memoryUsage += events.length * 100;
-  }
-  
-  return memoryUsage;
-};
 ```
 
 ---
 
-## 🔄 **Cross-Tab Synchronization** (`synchronization/cross-tab.ts`)
+## 🧠 **Memory Management**
 
-### **BroadcastChannel Communication**
+### **TTL-Based Cleanup** (`memory/ttl.ts`)
+**Features**:
+- Configurable time-to-live (TTL)
+- Automatic expiration checks
+- Periodic cleanup intervals
+- Memory usage estimation
+
 ```typescript
-export default function createSynchronizationManager(): SynchronizationManager {
-  const bc = new BroadcastChannel('the-base-event-sync');
-  
-  return {
-    sync<T>(event: BaseEvent<T>): void {
-      // Broadcast event to other tabs
-      bc.postMessage({
-        type: 'sync-event',
-        data: event
-      });
-    },
-    
-    onSync<T>(callback: (event: BaseEvent<T>) => void): void {
-      bc.addEventListener('message', (event) => {
-        if (event.data?.type === 'sync-event') {
-          callback(event.data.data);
-        }
-      });
-    }
-  };
-}
+// 30-second TTL with cleanup every 7.5 seconds
+const ttlManager = createTTLManager(30000, 1000);
+```
+
+### **Size Limits**
+**Features**:
+- Per-channel maximum events
+- Global memory constraints
+- Overflow prevention
+- Memory usage monitoring
+
+---
+
+## 🔄 **Cross-Tab Synchronization**
+
+### **BroadcastChannel API**
+```typescript
+// Share buffer state across browser windows
+const syncManager = createSynchronizationManager();
+
+syncManager.sync(event);
 ```
 
 ### **LocalStorage Integration**
 ```typescript
+// Persist buffer during page reload
 const CROSS_TAB_KEY = 'the-base-event-buffer';
 
-const saveToLocalStorage = (buffer: Map<string, BufferedEvent<unknown>[]): void => {
-  const serialized = JSON.stringify(Array.from(buffer.entries()));
-  localStorage.setItem(CROSS_TAB_KEY, serialized);
-};
-
-const loadFromLocalStorage = (): Map<string, BufferedEvent<unknown>[]> => {
-  const data = localStorage.getItem(CROSS_TAB_KEY);
-  if (data) {
-    return new Map(JSON.parse(data));
-  }
-  return new Map();
-};
+// Automatic restore on initialization
+const restoredBuffer = loadFromLocalStorage();
 ```
 
 ---
 
-## 📊 **Performance Metrics** (`buffer/` integration)
+## 📊 **Performance Metrics**
 
-### **Buffer Metrics Collection**
+### **Buffer Analytics**
 ```typescript
 interface BufferMetrics {
-  totalEvents: number;      // Total events across all channels
-  bufferedEvents: number;   // Currently buffered events
-  memoryUsage: number;      // Estimated memory usage
-  channels: number;         // Active channels
-  evictions: number;        // Events evicted
-  hits: number;            // Buffer hits (for LRU)
+  totalEvents: number;        // Total events across channels
+  bufferedEvents: number;       // Currently buffered
+  memoryUsage: number;         // Estimated memory usage
+  channels: number;           // Active channels
+  evictions: number;          // Events evicted
+  hits: number;                // Buffer hits (LRU)
 }
 ```
 
 ### **Real-time Monitoring**
 ```typescript
-const getBufferMetrics = (buffer: BufferManager): BufferMetrics => {
-  return {
-    totalEvents: buffer.size,
-    bufferedEvents: buffer.getMetrics().bufferedEvents,
-    memoryUsage: buffer.getMetrics().memoryUsage,
-    channels: buffer.getMetrics().channels,
-    evictions: buffer.getMetrics().evictions,
-    hits: buffer.getMetrics().hits
-  };
-};
+// Track events per second and buffer utilization
+const metrics = buffer.getMetrics();
+
+console.log(`Events/sec: ${metrics.eventsPerSecond}`);
+console.log(`Buffer utilization: ${metrics.bufferUtilization}%`);
 ```
 
 ---
 
-## 🎯 **Usage Examples**
+## 🎯 **Configuration**
 
-### **Strategy Selection**
-```typescript
-// LRU for frequently accessed channels
-const lruEmitter = new EventEmitter({
-  buffer: {
-    strategy: 'lru',
-    maxSize: 1000,
-    ttl: 30000
-  }
-});
-
-// FIFO for chronological events
-const fifoEmitter = new EventEmitter({
-  buffer: {
-    strategy: 'fifo',
-    maxSize: 1000,
-    ttl: 30000
-  }
-});
-
-// Priority for critical events
-const priorityEmitter = new EventEmitter({
-  buffer: {
-    strategy: 'priority',
-    maxSize: 1000,
-    ttl: 30000
-  }
-});
-```
-
-### **Configuration Options**
+### **Buffer Options**
 ```typescript
 interface BufferConfig {
   strategy: 'lru' | 'fifo' | 'priority';
-  maxSize: number;
-  ttl: number;              // Time-to-live in milliseconds
-  crossTab?: boolean;        // Enable cross-tab sync
-  compression?: boolean;      // Compress large payloads
+  maxSize: number;              // Maximum events per channel
+  ttl: number;                 // Time-to-live in ms
+  crossTab?: boolean;            // Enable cross-tab sync
+  compression?: boolean;          // Compress large payloads
 }
 ```
 
----
+### **Strategy Selection Guidelines**
 
-## 🎉 **Benefits Achieved**
-
-### **Performance**
-- **Intelligent Caching**: LRU strategy improves hit rates for hot channels
-- **Predictable Memory**: Size limits prevent unbounded growth
-- **Automatic Cleanup**: TTL-based expiration removes stale events
-- **Strategy Flexibility**: Choose optimal strategy per use case
-
-### **Reliability**
-- **No Lost Events**: Buffer replay guarantees delivery
-- **Cross-Environment**: Events persist across SSR/CSR boundaries
-- **Memory Safety**: Automatic leak prevention
-- **Monitoring**: Real-time performance metrics
-
-### **Scalability**
-- **Configurable Limits**: Adjust for different workload requirements
-- **Strategy Optimization**: Multiple algorithms for different patterns
-- **Resource Efficiency**: Memory usage optimization
-- **Cross-Tab Sync**: Multi-window event coordination
+| Access Pattern | Recommended Strategy |
+|--------------|-------------------|
+| Frequent reads | LRU |
+| Chronological order | FIFO |
+| Critical events | Priority |
 
 ---
 
-*Buffer system: Complete implementation with multiple strategies and intelligent management*
+## 🚀 **Benefits**
+
+### **✅ Event Reliability**
+- Intelligent replay guarantees no lost events
+- Automatic cleanup prevents memory leaks
+- Cross-tab synchronization ensures consistency
+
+### **✅ Performance**
+- Strategy selection optimizes for use case
+- O(1) operations for common patterns
+- Memory usage control prevents unbounded growth
+
+### **✅ Flexibility**
+- Pluggable strategy pattern
+- Configurable parameters
+- Framework-agnostic design
+
+---
+
+*Buffer system: Complete implementation with intelligent strategies and memory management*

@@ -4,8 +4,8 @@
  * @since 1.0.0
  */
 
-export { EventEmitter, createEventEmitter } from './emitter';
-export type { EventEmitterConfig } from './events/typing';
+export { EventEmitter, createEventEmitter } from "./emitter";
+export type { EventEmitterConfig } from "./emitter";
 
 // Export all event types and interfaces
 export type {
@@ -17,12 +17,12 @@ export type {
   Middleware,
   PerformanceMetrics,
   BaseEventConfig,
-  BufferConfig
-} from './events';
+  BufferConfig,
+} from "./events/typing";
 
 // Export buffer system
-export { createBufferManager } from './buffer';
-export type { BufferManager } from './buffer';
+export { createBufferManager } from "./buffer";
+export type { BufferManager } from "./buffer";
 
 // Export security (optional module will be added later)
 // export { SecurityManager } from './security' when implemented

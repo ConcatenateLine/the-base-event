@@ -27,9 +27,10 @@ export type UnsubscribeFunction = () => void;
 
 // Emit options
 export interface EmitOptions {
-  priority?: 'high' | 'medium' | 'low';
+  priority?: "high" | "medium" | "low";
   ttl?: number;
   immediate?: boolean;
+  type?: string;
 }
 
 // Middleware function type
@@ -47,28 +48,51 @@ export interface PerformanceMetrics {
   middlewareLatency: number;
 }
 
+// Buffer configuration
+export interface BufferConfig {
+  maxSize?: number;
+  ttl?: number;
+  strategy?: "lru" | "fifo" | "priority";
+  crossTab?: boolean;
+}
+
+// Base event configuration
+export interface BaseEventConfig {
+  buffer?: BufferConfig;
+  security?: {
+    enabled?: boolean;
+    rateLimit?: number;
+  };
+}
+
 // Error types
 export class BaseEventError extends Error {
-  constructor(message: string, public readonly code: string) {
+  constructor(
+    message: string,
+    public readonly code: string
+  ) {
     super(message);
-    this.name = 'BaseEventError';
+    this.name = "BaseEventError";
   }
 }
 
 export class BufferOverflowError extends BaseEventError {
   constructor(maxSize: number, attemptedSize: number) {
-    super(`Buffer overflow: attempted ${attemptedSize}, max ${maxSize}`, 'BUFFER_OVERFLOW');
+    super(
+      `Buffer overflow: attempted ${attemptedSize}, max ${maxSize}`,
+      "BUFFER_OVERFLOW"
+    );
   }
 }
 
 export class InvalidChannelError extends BaseEventError {
   constructor(channel: string) {
-    super(`Invalid channel: ${channel}`, 'INVALID_CHANNEL');
+    super(`Invalid channel: ${channel}`, "INVALID_CHANNEL");
   }
 }
 
 export class SecurityError extends BaseEventError {
   constructor(message: string) {
-    super(`Security violation: ${message}`, 'SECURITY_ERROR');
+    super(`Security violation: ${message}`, "SECURITY_ERROR");
   }
 }

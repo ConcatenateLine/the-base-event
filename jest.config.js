@@ -19,7 +19,7 @@ module.exports = {
     'lcov',
     'html'
   ],
-  coverageThresholds: {
+  coverageThreshold: {
     global: {
       branches: 95,
       functions: 95,
@@ -28,8 +28,5 @@ module.exports = {
     }
   },
   setupFilesAfterEnv: ['<rootDir>/src/test/setup.ts'],
-  moduleNameMapping: {
-    '^@/(.*)$': '<rootDir>/src/$1'
-  },
   testTimeout: 10000
 };

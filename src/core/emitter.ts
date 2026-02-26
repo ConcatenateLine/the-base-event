@@ -12,11 +12,12 @@ import type {
   UnsubscribeFunction,
   EmitOptions,
   Middleware,
-  PerformanceMetrics
-} from './events';
+  PerformanceMetrics,
+  BaseEventConfig,
+  BufferConfig,
+} from "./events/typing";
 
-import type { BufferManager, createBufferManager } from './buffer';
-import type { BaseEventConfig, BufferConfig } from './events/typing';
+import { BufferManager, createBufferManager } from "./buffer";
 
 export interface EventEmitterConfig extends BaseEventConfig {
   buffer?: BufferConfig;
@@ -36,13 +37,13 @@ export class EventEmitter {
   constructor(config: EventEmitterConfig = {}) {
     this.buffer = createBufferManager(config.buffer || {});
     this.middleware = config.middleware || [];
-    
+
     this.metrics = {
       eventsPerSecond: 0,
       bufferUtilization: 0,
       memoryUsage: 0,
       activeSubscriptions: 0,
-      middlewareLatency: 0
+      middlewareLatency: 0,
     };
   }
 
@@ -51,7 +52,7 @@ export class EventEmitter {
    */
   emit<T>(channel: string, data: T, options?: EmitOptions): void {
     if (this.destroyed) {
-      throw new Error('EventEmitter has been destroyed');
+      throw new Error("EventEmitter has been destroyed");
     }
 
     const event: BaseEvent<T> = {
@@ -59,30 +60,32 @@ export class EventEmitter {
       channel,
       data,
       timestamp: Date.now(),
-      type: options?.type || 'standard'
+      type: options?.type || "standard",
     };
 
     // Process through middleware chain
-    this.processMiddleware(event).then(() => {
-      // Add to buffer
-      this.buffer.add(event);
-      
-      // Notify subscribers
-      const subscribers = this.subscribers.get(channel);
-      if (subscribers) {
-        for (const callback of subscribers) {
-          try {
-            callback(event);
-          } catch (error) {
-            console.error('Error in event subscriber:', error);
+    this.processMiddleware(event)
+      .then(() => {
+        // Add to buffer
+        this.buffer.add(event);
+
+        // Notify subscribers
+        const subscribers = this.subscribers.get(channel);
+        if (subscribers) {
+          for (const callback of subscribers) {
+            try {
+              callback(event);
+            } catch (error) {
+              console.error("Error in event subscriber:", error);
+            }
           }
         }
-      }
-      
-      this.updateMetrics('emit');
-    }).catch(error => {
-      console.error('Error in middleware chain:', error);
-    });
+
+        this.updateMetrics("emit");
+      })
+      .catch(error => {
+        console.error("Error in middleware chain:", error);
+      });
   }
 
   /**
@@ -90,19 +93,19 @@ export class EventEmitter {
    */
   on<T>(channel: string, callback: EventCallback<T>): UnsubscribeFunction {
     if (this.destroyed) {
-      throw new Error('EventEmitter has been destroyed');
+      throw new Error("EventEmitter has been destroyed");
     }
 
     if (!this.subscribers.has(channel)) {
-      this.subscribers.set(channel, new Set());
+      this.subscribers.set(channel, new Set<EventCallback<unknown>>());
     }
 
-    this.subscribers.get(channel)!.add(callback);
+    this.subscribers.get(channel)!.add(callback as EventCallback<unknown>);
     this.metrics.activeSubscriptions++;
-    
+
     // Replay buffered events for this channel
     this.replayBufferedEvents<T>(channel, callback);
-    
+
     return () => this.unsubscribe(channel, callback);
   }
 
@@ -110,16 +113,16 @@ export class EventEmitter {
    * Subscribe to events only once
    */
   once<T>(channel: string, callback: EventCallback<T>): UnsubscribeFunction {
-    let unsubscribed = true;
-    
-    const wrappedCallback: EventCallback<T> = (event) => {
+    let subscribed = true;
+
+    const wrappedCallback: EventCallback<T> = event => {
       if (subscribed) {
         subscribed = false;
         callback(event);
         this.unsubscribe(channel, wrappedCallback);
       }
     };
-    
+
     return this.on(channel, wrappedCallback);
   }
 
@@ -131,12 +134,12 @@ export class EventEmitter {
     if (!subscribers) return;
 
     if (callback) {
-      subscribers.delete(callback);
+      subscribers.delete(callback as EventCallback<unknown>);
     } else {
       subscribers.clear();
     }
 
-    this.metrics.activeSubscribers = subscribers.size;
+    this.metrics.activeSubscriptions = subscribers.size;
   }
 
   /**
@@ -147,6 +150,7 @@ export class EventEmitter {
     this.subscribers.clear();
     this.buffer.clear();
     this.middleware = [];
+    this.metrics.activeSubscriptions = 0;
   }
 
   /**
@@ -171,6 +175,9 @@ export class EventEmitter {
    * Add middleware to the processing chain
    */
   use(middleware: Middleware): void {
+    if (this.destroyed) {
+      throw new Error("EventEmitter has been destroyed");
+    }
     this.middleware.push(middleware);
   }
 
@@ -178,7 +185,7 @@ export class EventEmitter {
    * Get current performance metrics
    */
   getMetrics(): PerformanceMetrics {
-    this.updateMetrics('check');
+    this.updateMetrics("check");
     return { ...this.metrics };
   }
 
@@ -195,7 +202,7 @@ export class EventEmitter {
         await middleware(event, next);
         this.metrics.middlewareLatency += Date.now() - startTime;
       } catch (error) {
-        console.error('Error in middleware:', error);
+        console.error("Error in middleware:", error);
         throw error;
       }
       index++;
@@ -205,14 +212,17 @@ export class EventEmitter {
   /**
    * Replay buffered events to a new subscriber
    */
-  private replayBufferedEvents<T>(channel: string, callback: EventCallback<T>): void {
+  private replayBufferedEvents<T>(
+    channel: string,
+    callback: EventCallback<T>
+  ): void {
     const bufferedEvents = this.buffer.get(channel);
-    
+
     for (const event of bufferedEvents) {
       try {
-        callback(event);
+        callback(event as BaseEvent<T>);
       } catch (error) {
-        console.error('Error replaying buffered event:', error);
+        console.error("Error replaying buffered event:", error);
       }
     }
   }
@@ -223,9 +233,9 @@ export class EventEmitter {
   private unsubscribe<T>(channel: string, callback: EventCallback<T>): void {
     const subscribers = this.subscribers.get(channel);
     if (subscribers) {
-      subscribers.delete(callback);
+      subscribers.delete(callback as EventCallback<unknown>);
       this.metrics.activeSubscriptions = subscribers.size;
-      
+
       if (subscribers.size === 0) {
         this.subscribers.delete(channel);
       }
@@ -235,21 +245,25 @@ export class EventEmitter {
   /**
    * Update performance metrics
    */
-  private updateMetrics(operation: 'emit' | 'check' | 'subscribe' | 'unsubscribe'): void {
+  private updateMetrics(
+    operation: "emit" | "check" | "subscribe" | "unsubscribe"
+  ): void {
     const now = Date.now();
-    
+
     switch (operation) {
-      case 'emit':
+      case "emit":
         this.metrics.eventsPerSecond++;
-        this.metrics.bufferUtilization = this.buffer.size / (this.buffer.getMetrics().totalEvents || 1);
+        this.metrics.bufferUtilization =
+          this.buffer.size / (this.buffer.getMetrics().totalEvents || 1);
         break;
-      case 'subscribe':
-      case 'unsubscribe':
-        this.metrics.activeSubscriptions = Array.from(this.subscribers.values())
-          .reduce((total, set) => total + set.size, 0);
+      case "subscribe":
+      case "unsubscribe":
+        this.metrics.activeSubscriptions = Array.from(
+          this.subscribers.values()
+        ).reduce((total, set) => total + set.size, 0);
         break;
     }
-    
+
     this.metrics.memoryUsage = this.buffer.size * 100; // Rough estimation
   }
 

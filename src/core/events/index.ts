@@ -15,21 +15,21 @@ export type {
   BaseEventError,
   BufferOverflowError,
   InvalidChannelError,
-  SecurityError
-} from './typing';
+  SecurityError,
+} from "./typing";
 
 export type {
   UserEventType,
   SystemEventType,
   PerformanceEventType,
   SecurityEventType,
-  TypedEvent
-} from './schemas';
+  TypedEvent,
+} from "./schemas";
 
 export {
   validateUserEvent,
   validateSystemEvent,
   validatePerformanceEvent,
   validateSecurityEvent,
-  validateEvent
-} from './schemas';
+  validateEvent,
+} from "./schemas";

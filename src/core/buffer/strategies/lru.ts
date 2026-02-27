@@ -4,7 +4,7 @@
  * @since 1.0.0
  */
 
-import type { BaseEvent, BufferedEvent } from '../../events/typing';
+import type { BaseEvent, BufferedEvent } from "../../events/typing";
 
 export interface LRUConfig {
   maxSize: number;
@@ -20,32 +20,35 @@ export default class LRUStrategy {
   constructor(private config: LRUConfig) {}
 
   add<T>(
-    buffer: Map<string, BufferedEvent<unknown>[]>, 
+    buffer: Map<string, BufferedEvent<unknown>[]>,
     event: BufferedEvent<T>
   ): void {
     const channel = event.channel;
     let events = buffer.get(channel) || [];
-    
+
     // Add new event
     events.push(event);
-    
+
     // Update access time
     this.accessOrder.set(channel, ++this.accessCounter);
-    
+
     // Check if we need to evict
     if (events.length > this.config.maxSize) {
       // Evict oldest event (simple FIFO for LRU)
       events.shift();
     }
-    
+
     // Update buffer
     buffer.set(channel, events);
   }
 
-  onAccess<T>(buffer: Map<string, BufferedEvent<unknown>[]>, channel: string): void {
+  onAccess<T>(
+    buffer: Map<string, BufferedEvent<unknown>[]>,
+    channel: string
+  ): void {
     // Update access time when channel is accessed
     this.accessOrder.set(channel, ++this.accessCounter);
-    
+
     // Move accessed channel's events to end (LRU behavior)
     const events = buffer.get(channel);
     if (events && events.length > 1) {
@@ -57,12 +60,18 @@ export default class LRUStrategy {
     }
   }
 
-  shouldEvict<T>(buffer: Map<string, BufferedEvent<unknown>[]>, channel: string): boolean {
+  shouldEvict<T>(
+    buffer: Map<string, BufferedEvent<unknown>[]>,
+    channel: string
+  ): boolean {
     const events = buffer.get(channel) || [];
     return events.length >= this.config.maxSize;
   }
 
-  evictOldest<T>(buffer: Map<string, BufferedEvent<unknown>[]>, channel: string): BufferedEvent<unknown> | null {
+  evictOldest<T>(
+    buffer: Map<string, BufferedEvent<unknown>[]>,
+    channel: string
+  ): BufferedEvent<unknown> | null {
     const events = buffer.get(channel) || [];
     return events.length > 0 ? events.shift() || null : null;
   }

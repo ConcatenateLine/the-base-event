@@ -5,10 +5,7 @@
  */
 
 // Core exports
-export { 
-  EventEmitter, 
-  createEventEmitter 
-} from './core';
+export { EventEmitter, createEventEmitter } from "./core";
 
 export type {
   BaseEvent,
@@ -20,5 +17,5 @@ export type {
   PerformanceMetrics,
   BaseEventConfig,
   BufferConfig,
-  EventEmitterConfig
-} from './core';
+  EventEmitterConfig,
+} from "./core";

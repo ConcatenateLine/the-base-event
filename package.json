@@ -68,6 +68,7 @@
     "test:integration": "jest src/test/integration",
     "test:single": "jest --testPathPattern=\"$1\"",
     "test:pattern": "jest --testNamePattern=\"$1\"",
+    "bench": "jest src/test/benchmark --verbose",
     "lint": "eslint src --ext .ts",
     "lint:fix": "eslint src --ext .ts --fix",
     "format": "prettier --write \"src/**/*.ts\"",

@@ -175,7 +175,7 @@ interface BaseEventConfig {
 - [x] Implement ring buffer with configurable strategies
 - [x] TTL and size limit enforcement
 - [x] Cross-tab synchronization via localStorage
-- [ ] Buffer compression for large payloads
+- [-] Buffer compression for large payloads (skipped)
 - [x] Unit tests for buffer strategies
 
 **Week 3-4: Event Emitter Core**
@@ -254,6 +254,16 @@ interface BaseEventConfig {
 - [ ] Initial blog post and announcement
 
 **Deliverables**: Production-ready npm package, community infrastructure
+
+### **Future Considerations**
+
+[ ] **Skipped: Buffer Compression for Large Payloads**
+
+  - **Reason**: Not needed for typical notification bus use cases (payloads typically <1KB)
+  - **Performance**: Compression adds CPU overhead, risking 100K+ events/sec target
+  - **Bundle Size**: LZ-string adds ~3KB+, threatening 1.5KB bundle target
+  - **Alternative**: Users with large payloads should configure smaller `maxSize` or `ttl`
+  - **Future**: Can be re-evaluated if demand emerges with threshold-based approach
 
 ---
 

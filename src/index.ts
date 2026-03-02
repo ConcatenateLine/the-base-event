@@ -19,3 +19,26 @@ export type {
   BufferConfig,
   EventEmitterConfig,
 } from "./core";
+
+// SSR/CSR exports
+export {
+  isSSR,
+  getEnvironment,
+  setSSR,
+  type Environment,
+} from "./core/ssr/detection";
+
+export {
+  HydrationManager,
+  DEFAULT_SSR_CONFIG,
+  type SSRConfig,
+  type SSRState,
+} from "./core/ssr/hydration";
+
+export {
+  BufferSyncManager,
+  type BufferSyncStrategy,
+  type SyncMode,
+} from "./core/ssr/buffer-sync";
+
+export { ClientWaitManager } from "./core/ssr/client-wait";

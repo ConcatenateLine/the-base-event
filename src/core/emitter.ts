@@ -18,14 +18,23 @@ import type {
 } from "./events/typing";
 
 import { BufferManager, createBufferManager } from "./buffer";
+import { isSSR, type Environment } from "./ssr/detection";
+import {
+  HydrationManager,
+  type SSRConfig,
+  DEFAULT_SSR_CONFIG,
+} from "./ssr/hydration";
+import { BufferSyncManager } from "./ssr/buffer-sync";
+import { ClientWaitManager } from "./ssr/client-wait";
 
 export interface EventEmitterConfig extends BaseEventConfig {
   buffer?: BufferConfig;
   middleware?: Middleware[];
+  ssr?: Partial<SSRConfig>;
 }
 
 /**
- * Framework-agnostic event emitter with intelligent buffering
+ * Framework-agnostic event emitter with intelligent buffering and SSR support
  */
 export class EventEmitter {
   private buffer: BufferManager;
@@ -34,9 +43,26 @@ export class EventEmitter {
   private metrics: PerformanceMetrics;
   private destroyed = false;
 
+  private hydrationManager: HydrationManager | null = null;
+  private bufferSyncManager: BufferSyncManager | null = null;
+  private clientWaitManager: ClientWaitManager | null = null;
+  private ssrConfig: SSRConfig;
+
   constructor(config: EventEmitterConfig = {}) {
     this.buffer = createBufferManager(config.buffer || {});
     this.middleware = config.middleware || [];
+    this.ssrConfig = { ...DEFAULT_SSR_CONFIG, ...config.ssr };
+
+    if (this.ssrConfig.enabled) {
+      this.hydrationManager = new HydrationManager(this.ssrConfig);
+      this.bufferSyncManager = new BufferSyncManager(
+        this.ssrConfig.bufferStrategy || "client-only",
+        this.ssrConfig.syncMode || "on-hydration"
+      );
+      this.clientWaitManager = new ClientWaitManager(
+        this.ssrConfig.hydrationDelay || 5000
+      );
+    }
 
     this.metrics = {
       eventsPerSecond: 0,
@@ -55,6 +81,35 @@ export class EventEmitter {
       throw new Error("EventEmitter has been destroyed");
     }
 
+    if (this.ssrConfig?.enabled && isSSR()) {
+      this.bufferServerEvent({
+        id: this.generateEventId(),
+        channel,
+        data,
+        timestamp: Date.now(),
+        type: options?.type || "standard",
+      });
+      return;
+    }
+
+    if (this.ssrConfig?.enabled && this.hydrationManager) {
+      this.hydrationManager.waitForHydration().then(() => {
+        this.emitInternal<T>(channel, data, options);
+      });
+      return;
+    }
+
+    this.emitInternal<T>(channel, data, options);
+  }
+
+  /**
+   * Internal emit logic after SSR checks
+   */
+  private emitInternal<T>(
+    channel: string,
+    data: T,
+    options?: EmitOptions
+  ): void {
     const event: BaseEvent<T> = {
       id: this.generateEventId(),
       channel,
@@ -63,13 +118,10 @@ export class EventEmitter {
       type: options?.type || "standard",
     };
 
-    // Process through middleware chain
     this.processMiddleware(event)
       .then(() => {
-        // Add to buffer
         this.buffer.add(event);
 
-        // Notify subscribers
         const subscribers = this.subscribers.get(channel);
         if (subscribers) {
           for (const callback of subscribers) {
@@ -272,6 +324,108 @@ export class EventEmitter {
    */
   private generateEventId(): string {
     return `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+  }
+
+  /**
+   * Buffer server-side event for later replay
+   */
+  private bufferServerEvent<T>(event: BaseEvent<T>): void {
+    if (!this.bufferSyncManager) return;
+
+    const bufferedEvent: BufferedEvent<T> = {
+      ...event,
+      bufferedAt: Date.now(),
+    };
+
+    this.bufferSyncManager.bufferServerEvent(bufferedEvent);
+  }
+
+  /**
+   * Replay server events to subscribers (called after hydration)
+   */
+  replayServerEvents(): void {
+    if (!this.bufferSyncManager) return;
+
+    const events = this.bufferSyncManager.replayServerEvents();
+
+    for (const event of events) {
+      const subscribers = this.subscribers.get(event.channel);
+      if (subscribers) {
+        for (const callback of subscribers) {
+          try {
+            callback(event as BaseEvent<unknown>);
+          } catch (error) {
+            console.error("Error replaying server event:", error);
+          }
+        }
+      }
+    }
+  }
+
+  /**
+   * Check if running in SSR environment
+   */
+  isSSR(): boolean {
+    return isSSR();
+  }
+
+  /**
+   * Wait for client hydration to complete
+   */
+  waitForHydration(): Promise<void> {
+    if (!this.hydrationManager) {
+      return Promise.resolve();
+    }
+    return this.hydrationManager.waitForHydration();
+  }
+
+  /**
+   * Get current SSR configuration
+   */
+  getSSRConfig(): SSRConfig {
+    return { ...this.ssrConfig };
+  }
+
+  /**
+   * Mark the application as hydrated (call after framework hydration)
+   */
+  markHydrated(): void {
+    if (this.hydrationManager) {
+      this.hydrationManager.markHydrated();
+    }
+    if (this.clientWaitManager) {
+      this.clientWaitManager.onClientMount();
+    }
+    if (this.bufferSyncManager?.shouldSyncOnHydration()) {
+      this.replayServerEvents();
+    }
+  }
+
+  /**
+   * Update SSR configuration at runtime
+   */
+  configureSSR(config: Partial<SSRConfig>): void {
+    this.ssrConfig = { ...this.ssrConfig, ...config };
+
+    if (this.hydrationManager) {
+      this.hydrationManager.updateConfig(config);
+    }
+
+    if (this.bufferSyncManager) {
+      if (config.bufferStrategy) {
+        this.bufferSyncManager.setStrategy(config.bufferStrategy);
+      }
+      if (config.syncMode) {
+        this.bufferSyncManager.setSyncMode(config.syncMode);
+      }
+    }
+  }
+
+  /**
+   * Check if SSR is enabled
+   */
+  isSSREnabled(): boolean {
+    return this.ssrConfig?.enabled ?? false;
   }
 }
 

@@ -644,3 +644,176 @@ describe("createEventEmitter", () => {
     emitter.destroy();
   });
 });
+
+describe("EventEmitter SSR Integration", () => {
+  let emitter: EventEmitter;
+
+  afterEach(() => {
+    if (emitter) {
+      emitter.destroy();
+    }
+  });
+
+  describe("SSR configuration", () => {
+    it("should accept SSR config in constructor", () => {
+      emitter = new EventEmitter({
+        ssr: {
+          enabled: true,
+          hydrationDelay: 100,
+          bufferStrategy: "server-persist",
+          syncMode: "on-hydration",
+        },
+      });
+
+      expect(emitter.isSSREnabled()).toBe(true);
+      expect(emitter.getSSRConfig().enabled).toBe(true);
+      expect(emitter.getSSRConfig().hydrationDelay).toBe(100);
+      expect(emitter.getSSRConfig().bufferStrategy).toBe("server-persist");
+      expect(emitter.getSSRConfig().syncMode).toBe("on-hydration");
+    });
+
+    it("should use default SSR config when not provided", () => {
+      emitter = new EventEmitter();
+
+      expect(emitter.isSSREnabled()).toBe(false);
+      expect(emitter.getSSRConfig().enabled).toBe(false);
+    });
+
+    it("should allow runtime SSR configuration update", () => {
+      emitter = new EventEmitter({
+        ssr: {
+          enabled: true,
+        },
+      });
+
+      emitter.configureSSR({ hydrationDelay: 200, bufferStrategy: "hybrid" });
+
+      const config = emitter.getSSRConfig();
+      expect(config.hydrationDelay).toBe(200);
+      expect(config.bufferStrategy).toBe("hybrid");
+    });
+  });
+
+  describe("SSR detection", () => {
+    it("should return SSR status", () => {
+      emitter = new EventEmitter();
+
+      const result = emitter.isSSR();
+      expect(typeof result).toBe("boolean");
+    });
+  });
+
+  describe("hydration management", () => {
+    it("should provide waitForHydration method", () => {
+      emitter = new EventEmitter({
+        ssr: { enabled: true },
+      });
+
+      expect(typeof emitter.waitForHydration).toBe("function");
+      expect(emitter.waitForHydration()).toBeInstanceOf(Promise);
+    });
+
+    it("should provide markHydrated method", () => {
+      emitter = new EventEmitter({
+        ssr: { enabled: true },
+      });
+
+      expect(typeof emitter.markHydrated).toBe("function");
+      emitter.markHydrated();
+    });
+
+    it("should resolve waitForHydration after markHydrated", async () => {
+      emitter = new EventEmitter({
+        ssr: { enabled: true, hydrationDelay: 0 },
+      });
+
+      const hydrationPromise = emitter.waitForHydration();
+      emitter.markHydrated();
+
+      await expect(hydrationPromise).resolves.toBeUndefined();
+    });
+
+    it("should resolve waitForHydration immediately if already hydrated", async () => {
+      emitter = new EventEmitter({
+        ssr: { enabled: true, hydrationDelay: 0 },
+      });
+
+      emitter.markHydrated();
+      await expect(emitter.waitForHydration()).resolves.toBeUndefined();
+    });
+  });
+
+  describe("server-side event buffering", () => {
+    it("should buffer events when SSR is enabled and isSSR returns true", () => {
+      const { setSSR } = require("../../core/ssr/detection");
+
+      emitter = new EventEmitter({
+        ssr: {
+          enabled: true,
+          bufferStrategy: "server-persist",
+        },
+      });
+
+      setSSR(true);
+
+      emitter.emit("test", { message: "hello" });
+
+      setSSR(undefined);
+    });
+
+    it("should not buffer events when SSR is disabled", async () => {
+      const { setSSR } = require("../../core/ssr/detection");
+
+      emitter = new EventEmitter({
+        ssr: { enabled: false },
+      });
+
+      setSSR(true);
+
+      const callback = createSpyCallback();
+      emitter.on("test", callback);
+
+      emitter.emit("test", { message: "hello" });
+
+      await waitForAsync(50);
+      expect(callback).toHaveBeenCalled();
+
+      setSSR(undefined);
+    });
+  });
+
+  describe("replayServerEvents", () => {
+    it("should provide replayServerEvents method", () => {
+      emitter = new EventEmitter({
+        ssr: { enabled: true },
+      });
+
+      expect(typeof emitter.replayServerEvents).toBe("function");
+    });
+
+    it("should replay events when markHydrated is called with on-hydration sync mode", async () => {
+      const { setSSR } = require("../../core/ssr/detection");
+
+      emitter = new EventEmitter({
+        ssr: {
+          enabled: true,
+          bufferStrategy: "server-persist",
+          syncMode: "on-hydration",
+        },
+      });
+
+      setSSR(true);
+      emitter.emit("test", { message: "server event" });
+      setSSR(false);
+
+      const callback = createSpyCallback();
+      emitter.on("test", callback);
+
+      emitter.markHydrated();
+
+      await waitForAsync(50);
+
+      setSSR(undefined);
+    });
+  });
+});

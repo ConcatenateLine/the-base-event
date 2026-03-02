@@ -24,5 +24,25 @@ export type {
 export { createBufferManager } from "./buffer";
 export type { BufferManager } from "./buffer";
 
-// Export security (optional module will be added later)
-// export { SecurityManager } from './security' when implemented
+// Export SSR/CSR module
+export {
+  isSSR,
+  getEnvironment,
+  setSSR,
+  type Environment,
+} from "./ssr/detection";
+
+export {
+  HydrationManager,
+  DEFAULT_SSR_CONFIG,
+  type SSRConfig,
+  type SSRState,
+} from "./ssr/hydration";
+
+export {
+  BufferSyncManager,
+  type BufferSyncStrategy,
+  type SyncMode,
+} from "./ssr/buffer-sync";
+
+export { ClientWaitManager } from "./ssr/client-wait";

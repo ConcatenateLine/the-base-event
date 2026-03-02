@@ -15,6 +15,7 @@ import type {
   PerformanceMetrics,
   BaseEventConfig,
   BufferConfig,
+  OnceOptions,
 } from "./events/typing";
 
 import { BufferManager, createBufferManager } from "./buffer";
@@ -26,11 +27,20 @@ import {
 } from "./ssr/hydration";
 import { BufferSyncManager } from "./ssr/buffer-sync";
 import { ClientWaitManager } from "./ssr/client-wait";
+import { matchWildcard, compilePattern } from "./events/pattern-match";
 
 export interface EventEmitterConfig extends BaseEventConfig {
   buffer?: BufferConfig;
   middleware?: Middleware[];
   ssr?: Partial<SSRConfig>;
+}
+
+interface OnceListenerConfig {
+  callback: EventCallback<unknown>;
+  attempts: number;
+  maxAttempts: number;
+  timeoutId?: ReturnType<typeof setTimeout>;
+  resolved: boolean;
 }
 
 /**
@@ -39,6 +49,12 @@ export interface EventEmitterConfig extends BaseEventConfig {
 export class EventEmitter {
   private buffer: BufferManager;
   private subscribers = new Map<string, Set<EventCallback<unknown>>>();
+  private patternSubscribers: Array<{
+    pattern: ReturnType<typeof compilePattern>;
+    callback: EventCallback<unknown>;
+    regex: RegExp;
+  }> = [];
+  private onceListeners: Map<string, OnceListenerConfig> = new Map();
   private middleware: Middleware[] = [];
   private metrics: PerformanceMetrics;
   private destroyed = false;
@@ -116,6 +132,7 @@ export class EventEmitter {
       data,
       timestamp: Date.now(),
       type: options?.type || "standard",
+      version: options?.version,
     };
 
     this.processMiddleware(event)
@@ -133,11 +150,49 @@ export class EventEmitter {
           }
         }
 
+        for (const patternSub of this.patternSubscribers) {
+          if (matchWildcard(channel, patternSub.regex.source)) {
+            try {
+              patternSub.callback(event);
+            } catch (error) {
+              console.error("Error in pattern subscriber:", error);
+            }
+          }
+        }
+
+        this.handleOnceListeners<T>(channel, event);
+
         this.updateMetrics("emit");
       })
       .catch(error => {
         console.error("Error in middleware chain:", error);
       });
+  }
+
+  private handleOnceListeners<T>(channel: string, event: BaseEvent<T>): void {
+    const onceConfig = this.onceListeners.get(channel);
+    if (!onceConfig) return;
+
+    onceConfig.attempts++;
+
+    if (!onceConfig.resolved) {
+      onceConfig.resolved = true;
+
+      if (onceConfig.timeoutId) {
+        clearTimeout(onceConfig.timeoutId);
+      }
+
+      try {
+        onceConfig.callback(event as BaseEvent<unknown>);
+      } catch (error) {
+        console.error("Error in once listener:", error);
+      }
+
+      this.unsubscribe(channel, onceConfig.callback);
+      this.onceListeners.delete(channel);
+    } else if (onceConfig.attempts < onceConfig.maxAttempts) {
+      onceConfig.resolved = false;
+    }
   }
 
   /**
@@ -162,16 +217,111 @@ export class EventEmitter {
   }
 
   /**
+   * Subscribe to events matching a wildcard pattern
+   * Supports * for single segment and ** for multi-segment
+   */
+  onPattern<T>(
+    pattern: string,
+    callback: EventCallback<T>
+  ): UnsubscribeFunction {
+    if (this.destroyed) {
+      throw new Error("EventEmitter has been destroyed");
+    }
+
+    const compiled = compilePattern(pattern);
+
+    this.patternSubscribers.push({
+      pattern: compiled,
+      callback: callback as EventCallback<unknown>,
+      regex: compiled.regex,
+    });
+
+    this.metrics.activeSubscriptions++;
+
+    return () => {
+      const idx = this.patternSubscribers.findIndex(
+        sub => sub.callback === callback
+      );
+      if (idx !== -1) {
+        this.patternSubscribers.splice(idx, 1);
+        this.metrics.activeSubscriptions--;
+      }
+    };
+  }
+
+  /**
+   * Subscribe to pattern events only once
+   */
+  oncePattern<T>(
+    pattern: string,
+    callback: EventCallback<T>,
+    _options?: OnceOptions
+  ): UnsubscribeFunction {
+    let called = false;
+
+    const wrappedCallback: EventCallback<T> = event => {
+      if (!called) {
+        called = true;
+        callback(event);
+      }
+    };
+
+    return this.onPattern(pattern, wrappedCallback);
+  }
+
+  /**
    * Subscribe to events only once
    */
-  once<T>(channel: string, callback: EventCallback<T>): UnsubscribeFunction {
+  once<T>(
+    channel: string,
+    callback: EventCallback<T>,
+    options?: OnceOptions
+  ): UnsubscribeFunction {
+    const maxAttempts = options?.maxAttempts ?? 1;
+    const timeout = options?.timeout;
+    const defaultValue = options?.defaultValue;
+
     let subscribed = true;
+
+    const onceConfig: OnceListenerConfig = {
+      callback: callback as EventCallback<unknown>,
+      attempts: 0,
+      maxAttempts,
+      resolved: false,
+    };
+
+    if (timeout && timeout > 0) {
+      const timeoutId = setTimeout(() => {
+        if (!onceConfig.resolved) {
+          onceConfig.resolved = true;
+          if (defaultValue !== undefined) {
+            try {
+              callback({
+                id: "",
+                channel,
+                data: defaultValue as T,
+                timestamp: Date.now(),
+              } as BaseEvent<T>);
+            } catch (error) {
+              console.error("Error in once timeout callback:", error);
+            }
+          }
+          this.unsubscribe(channel, wrappedCallback);
+          this.onceListeners.delete(channel);
+        }
+      }, timeout);
+
+      onceConfig.timeoutId = timeoutId;
+    }
+
+    this.onceListeners.set(channel, onceConfig);
 
     const wrappedCallback: EventCallback<T> = event => {
       if (subscribed) {
         subscribed = false;
         callback(event);
         this.unsubscribe(channel, wrappedCallback);
+        this.onceListeners.delete(channel);
       }
     };
 
@@ -200,6 +350,15 @@ export class EventEmitter {
   destroy(): void {
     this.destroyed = true;
     this.subscribers.clear();
+    this.patternSubscribers = [];
+
+    for (const [, onceConfig] of this.onceListeners) {
+      if (onceConfig.timeoutId) {
+        clearTimeout(onceConfig.timeoutId);
+      }
+    }
+    this.onceListeners.clear();
+
     this.buffer.clear();
     this.middleware = [];
     this.metrics.activeSubscriptions = 0;

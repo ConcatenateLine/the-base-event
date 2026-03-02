@@ -11,6 +11,7 @@ export interface BaseEvent<T = unknown> {
   data: T;
   timestamp: number;
   type?: string;
+  version?: string;
 }
 
 // Buffered event for replay functionality
@@ -25,12 +26,20 @@ export type EventCallback<T = unknown> = (event: BaseEvent<T>) => void;
 // Unsubscribe function type
 export type UnsubscribeFunction = () => void;
 
+// Options for once listener
+export interface OnceOptions {
+  timeout?: number;
+  defaultValue?: unknown;
+  maxAttempts?: number;
+}
+
 // Emit options
 export interface EmitOptions {
   priority?: "high" | "medium" | "low";
   ttl?: number;
   immediate?: boolean;
   type?: string;
+  version?: string;
 }
 
 // Middleware function type

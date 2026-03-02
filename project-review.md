@@ -214,10 +214,10 @@ interface BaseEventConfig {
 **Week 7-8: Event System Enhancements**
 
 - [x] Event schema validation system (`src/core/events/schemas.ts`, `src/core/middleware/validation.ts`, `src/test/unit/schema-validation.test.ts`)
-- [ ] Event versioning support
-- [ ] Wildcard pattern matching
-- [ ] Once listeners with auto-cleanup
-- [ ] TypeScript interface generation
+- [x] Event versioning support (`src/core/events/versioning.ts`, `src/core/events/typing.ts`)
+- [x] Wildcard pattern matching (`src/core/events/pattern-match.ts`, `docs/architecture/wildcard-patterns.md`)
+- [x] Once listeners with auto-cleanup (`src/core/emitter.ts`, `src/core/events/typing.ts`, `docs/architecture/once-listeners.md`)
+- [x] TypeScript interface generation (`src/core/events/interface-generator.ts`, `docs/architecture/interface-generation.md`)
 
 **Week 9-10: Security Module (Optional)**
 

@@ -179,30 +179,30 @@ interface BaseEventConfig {
 
 **Week 1-2: Core Buffer System**
 
-- [x] Implement ring buffer with configurable strategies
-- [x] TTL and size limit enforcement
-- [x] Cross-tab synchronization via localStorage
+- [x] Implement ring buffer with configurable strategies (`src/core/buffer/strategies/*.ts`, `src/test/unit/buffer-manager.test.ts`)
+- [x] TTL and size limit enforcement (`src/core/buffer/memory/ttl.ts`, `src/core/buffer/index.ts`)
+- [x] Cross-tab synchronization via localStorage (`src/core/ssr/buffer-sync.ts`, `src/test/integration/integration.test.ts`)
 - [S] Buffer compression for large payloads (skipped)
-- [x] Unit tests for buffer strategies
+- [x] Unit tests for buffer strategies (`src/test/unit/buffer-manager.test.ts`)
 
 **Week 3-4: Event Emitter Core**
 
-- [x] Main EventEmitter class implementation
-- [x] Event type system with TypeScript generics
-- [x] Async middleware chain support
-- [x] Subscription management with cleanup
-- [x] Integration tests for emitter + buffer
+- [x] Main EventEmitter class implementation (`src/core/emitter.ts`, `src/test/unit/event-emitter.test.ts`)
+- [x] Event type system with TypeScript generics (`src/core/events/typing.ts`, `src/core/events/index.ts`)
+- [x] Async middleware chain support (`src/core/emitter.ts`, `src/test/unit/middleware.test.ts`)
+- [x] Subscription management with cleanup (`src/core/emitter.ts`, `src/test/unit/event-emitter.test.ts`)
+- [x] Integration tests for emitter + buffer (`src/test/integration/integration.test.ts`)
 
 **Week 5-6: Performance & SSR Support**
 
-- [x] Built-in performance metrics collection
-- [x] Memory usage tracking
-- [x] Events per second monitoring
-- [x] Performance optimization benchmarks
+- [x] Built-in performance metrics collection (`src/core/emitter.ts`, `src/test/unit/performance-metrics.test.ts`)
+- [x] Memory usage tracking (`src/core/emitter.ts`, `src/test/benchmark/throughput.test.ts`)
+- [x] Events per second monitoring (`src/core/emitter.ts`, `src/test/unit/performance-metrics.test.ts`)
+- [x] Performance optimization benchmarks (`src/test/benchmark/throughput.test.ts`)
 - [S] Performance regression tests(skipped)
-- [x] SSR/CSR environment detection
-- [x] Client hydration waiting mechanism
-- [x] Cross-environment buffer synchronization
+- [x] SSR/CSR environment detection (`src/core/ssr/detection.ts`, `src/test/unit/ssr.test.ts`)
+- [x] Client hydration waiting mechanism (`src/core/ssr/hydration.ts`, `src/core/ssr/client-wait.ts`, `src/test/unit/ssr.test.ts`)
+- [x] Cross-environment buffer synchronization (`src/core/ssr/buffer-sync.ts`, `src/test/unit/ssr.test.ts`)
 - [x] SSR-safe event emission patterns (`src/core/emitter.ts`, `src/test/unit/event-emitter.test.ts:668-812`)
 
 **Deliverables**: Core engine with intelligent buffering, async middleware, performance monitoring
@@ -275,7 +275,7 @@ interface BaseEventConfig {
 
 ### **Future Considerations**
 
-[ ] **Skipped: Buffer Compression for Large Payloads**
+[S] **Skipped: Buffer Compression for Large Payloads**
 
 - **Reason**: Not needed for typical notification bus use cases (payloads typically <1KB)
 - **Performance**: Compression adds CPU overhead, risking 100K+ events/sec target

@@ -4,7 +4,7 @@
  * @since 1.0.0
  */
 
-import type { BaseEvent, BufferedEvent } from "../../events/typing";
+import type { BufferedEvent } from "../../events/typing";
 
 export interface LRUConfig {
   maxSize: number;
@@ -24,7 +24,7 @@ export default class LRUStrategy {
     event: BufferedEvent<T>
   ): void {
     const channel = event.channel;
-    let events = buffer.get(channel) || [];
+    const events = buffer.get(channel) || [];
 
     // Add new event
     events.push(event);
@@ -42,7 +42,7 @@ export default class LRUStrategy {
     buffer.set(channel, events);
   }
 
-  onAccess<T>(
+  onAccess<_T>(
     buffer: Map<string, BufferedEvent<unknown>[]>,
     channel: string
   ): void {
@@ -60,7 +60,7 @@ export default class LRUStrategy {
     }
   }
 
-  shouldEvict<T>(
+  shouldEvict<_T>(
     buffer: Map<string, BufferedEvent<unknown>[]>,
     channel: string
   ): boolean {
@@ -68,7 +68,7 @@ export default class LRUStrategy {
     return events.length >= this.config.maxSize;
   }
 
-  evictOldest<T>(
+  evictOldest<_T>(
     buffer: Map<string, BufferedEvent<unknown>[]>,
     channel: string
   ): BufferedEvent<unknown> | null {

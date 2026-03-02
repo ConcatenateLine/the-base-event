@@ -24,15 +24,14 @@ export interface MemoryManager {
  */
 export default function createTTLManager(
   ttl: number,
-  maxSize: number
+  _maxSize: number
 ): MemoryManager {
   const interval = ttl / 4; // Check every quarter TTL
   let cleanupInterval: NodeJS.Timeout | null = null;
 
   return {
-    cleanup<T>(buffer: Map<string, BufferedEvent<T>[]>): number {
+    cleanup<_T>(buffer: Map<string, BufferedEvent<_T>[]>): number {
       let cleanedCount = 0;
-      const now = Date.now();
 
       for (const [channel, events] of buffer.entries()) {
         const originalLength = events.length;
@@ -69,14 +68,13 @@ export default function createTTLManager(
     },
 
     setMaxSize(newMaxSize: number): void {
-      maxSize = newMaxSize;
+      _maxSize = newMaxSize;
     },
 
     isExpired(event: BufferedEvent<unknown>): boolean {
       if (!event.ttl) return false;
 
-      const now = Date.now();
-      return now - event.bufferedAt > event.ttl;
+      return Date.now() - event.bufferedAt > event.ttl;
     },
   };
 }
@@ -87,6 +85,5 @@ export default function createTTLManager(
 function isEventExpired(event: BufferedEvent<unknown>): boolean {
   if (!event.ttl) return false;
 
-  const now = Date.now();
-  return now - event.bufferedAt > event.ttl;
+  return Date.now() - event.bufferedAt > event.ttl;
 }

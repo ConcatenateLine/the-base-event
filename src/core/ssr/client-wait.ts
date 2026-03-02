@@ -22,7 +22,7 @@ export class ClientWaitManager {
 
   onClientMount(): void {
     if (this.isMounted) return;
-    
+
     this.isMounted = true;
     this.clearTimeout();
     this.mountResolve?.();

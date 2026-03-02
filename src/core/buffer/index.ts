@@ -11,15 +11,15 @@ export interface BufferStrategy {
     buffer: Map<string, BufferedEvent<unknown>[]>,
     event: BufferedEvent<T>
   ): void;
-  onAccess<T>(
+  onAccess<_T>(
     buffer: Map<string, BufferedEvent<unknown>[]>,
     channel: string
   ): void;
-  shouldEvict<T>(
+  shouldEvict<_T>(
     buffer: Map<string, BufferedEvent<unknown>[]>,
     channel: string
   ): boolean;
-  evictOldest<T>(
+  evictOldest<_T>(
     buffer: Map<string, BufferedEvent<unknown>[]>,
     channel: string
   ): BufferedEvent<unknown> | null;
@@ -61,9 +61,9 @@ export interface BufferManager {
  */
 export function createBufferManager(config: BufferConfig = {}): BufferManager {
   const buffer = new Map<string, BufferedEvent<unknown>[]>();
-  let maxSize = config.maxSize || 1000;
-  let ttl = config.ttl || 30000;
-  let crossTabSync = config.crossTab || false;
+  const maxSize = config.maxSize || 1000;
+  const ttl = config.ttl || 30000;
+  const crossTabSync = config.crossTab || false;
 
   // Initialize strategy-specific components
   const strategy = createStrategy(config.strategy || "lru");
@@ -156,7 +156,7 @@ class UniversalBufferManager implements BufferManager {
     let bufferedEvents = 0;
     let memoryUsage = 0;
 
-    for (const [channel, events] of this.buffer.entries()) {
+    for (const [_channel, events] of this.buffer.entries()) {
       bufferedEvents += events.length;
       memoryUsage += events.length * 100;
     }
@@ -198,7 +198,7 @@ function createLRUStrategy(): BufferStrategy {
       event: BufferedEvent<T>
     ): void {
       const channel = event.channel;
-      let events = buffer.get(channel) || [];
+      const events = buffer.get(channel) || [];
 
       events.push(event);
       accessOrder.set(channel, ++accessCounter);
@@ -210,14 +210,14 @@ function createLRUStrategy(): BufferStrategy {
       buffer.set(channel, events);
     },
 
-    onAccess<T>(
+    onAccess<_T>(
       buffer: Map<string, BufferedEvent<unknown>[]>,
       channel: string
     ): void {
       accessOrder.set(channel, ++accessCounter);
     },
 
-    shouldEvict<T>(
+    shouldEvict<_T>(
       buffer: Map<string, BufferedEvent<unknown>[]>,
       channel: string
     ): boolean {
@@ -225,7 +225,7 @@ function createLRUStrategy(): BufferStrategy {
       return events.length >= 1000;
     },
 
-    evictOldest<T>(
+    evictOldest<_T>(
       buffer: Map<string, BufferedEvent<unknown>[]>,
       channel: string
     ): BufferedEvent<unknown> | null {
@@ -245,7 +245,7 @@ function createFIFOStrategy(): BufferStrategy {
       event: BufferedEvent<T>
     ): void {
       const channel = event.channel;
-      let events = buffer.get(channel) || [];
+      const events = buffer.get(channel) || [];
 
       events.push(event);
 
@@ -256,9 +256,9 @@ function createFIFOStrategy(): BufferStrategy {
       buffer.set(channel, events);
     },
 
-    onAccess<T>(): void {},
+    onAccess<_T>(): void {},
 
-    shouldEvict<T>(
+    shouldEvict<_T>(
       buffer: Map<string, BufferedEvent<unknown>[]>,
       channel: string
     ): boolean {
@@ -266,7 +266,7 @@ function createFIFOStrategy(): BufferStrategy {
       return events.length >= 1000;
     },
 
-    evictOldest<T>(
+    evictOldest<_T>(
       buffer: Map<string, BufferedEvent<unknown>[]>,
       channel: string
     ): BufferedEvent<unknown> | null {
@@ -286,7 +286,7 @@ function createPriorityStrategy(): BufferStrategy {
 /**
  * Memory manager factory function
  */
-function createMemoryManager(ttl: number, maxSize: number): MemoryManager {
+function createMemoryManager(_ttl: number, _maxSize: number): MemoryManager {
   return {
     cleanup<T>(buffer: Map<string, BufferedEvent<T>[]>): number {
       let cleanedCount = 0;
@@ -312,11 +312,11 @@ function createMemoryManager(ttl: number, maxSize: number): MemoryManager {
     },
 
     setTTL(newTtl: number): void {
-      ttl = newTtl;
+      _ttl = newTtl;
     },
 
     setMaxSize(newMaxSize: number): void {
-      maxSize = newMaxSize;
+      _maxSize = newMaxSize;
     },
   };
 }

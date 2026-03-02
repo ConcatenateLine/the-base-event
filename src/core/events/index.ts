@@ -24,6 +24,20 @@ export type {
   PerformanceEventType,
   SecurityEventType,
   TypedEvent,
+  Schema,
+  SchemaDefinition,
+  ValidationError,
+  ValidationResult,
+  ValidationRule,
+  StringRule,
+  NumberRule,
+  BooleanRule,
+  ObjectRule,
+  ArrayRule,
+  EnumRule,
+  UnionRule,
+  LiteralRule,
+  SchemaRegistry,
 } from "./schemas";
 
 export {
@@ -32,4 +46,12 @@ export {
   validatePerformanceEvent,
   validateSecurityEvent,
   validateEvent,
+  validate,
+  validateEventData,
+  isValid,
+  getGlobalRegistry,
+  createSchemaRegistry,
+  registerSchema,
+  createSchemaValidator,
+  SchemaValidationError,
 } from "./schemas";

@@ -213,7 +213,7 @@ interface BaseEventConfig {
 
 **Week 7-8: Event System Enhancements**
 
-- [ ] Event schema validation system
+- [x] Event schema validation system (`src/core/events/schemas.ts`, `src/core/middleware/validation.ts`, `src/test/unit/schema-validation.test.ts`)
 - [ ] Event versioning support
 - [ ] Wildcard pattern matching
 - [ ] Once listeners with auto-cleanup

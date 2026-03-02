@@ -17,7 +17,10 @@ export class BufferSyncManager {
   private syncMode: SyncMode;
   private isClient = false;
 
-  constructor(strategy: BufferSyncStrategy = "client-only", syncMode: SyncMode = "on-hydration") {
+  constructor(
+    strategy: BufferSyncStrategy = "client-only",
+    syncMode: SyncMode = "on-hydration"
+  ) {
     this.strategy = strategy;
     this.syncMode = syncMode;
     this.isClient = typeof window !== "undefined";
@@ -78,7 +81,7 @@ export class BufferSyncManager {
 
   private persistToStorage(): void {
     if (!this.isClient) return;
-    
+
     try {
       const serialized = JSON.stringify(this.serverBuffer);
       if (typeof localStorage !== "undefined") {
@@ -91,7 +94,7 @@ export class BufferSyncManager {
 
   private loadFromStorage(): BufferedEvent[] {
     if (!this.isClient) return [];
-    
+
     try {
       if (typeof localStorage === "undefined") return [];
       const data = localStorage.getItem(STORAGE_KEY);
@@ -104,7 +107,7 @@ export class BufferSyncManager {
 
   clearStorage(): void {
     if (!this.isClient) return;
-    
+
     try {
       if (typeof localStorage !== "undefined") {
         localStorage.removeItem(STORAGE_KEY);

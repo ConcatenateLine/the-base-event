@@ -4,8 +4,6 @@
  * @since 1.0.0
  */
 
-import { EventEmitter } from "../core/emitter";
-
 declare global {
   namespace jest {
     interface Matchers<R> {

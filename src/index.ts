@@ -42,3 +42,40 @@ export {
 } from "./core/ssr/buffer-sync";
 
 export { ClientWaitManager } from "./core/ssr/client-wait";
+
+// Schema validation exports
+export {
+  validate,
+  validateEventData,
+  isValid,
+  getGlobalRegistry,
+  createSchemaRegistry,
+  registerSchema,
+  createSchemaValidator,
+  SchemaValidationError,
+} from "./core/events/schemas";
+
+export type {
+  Schema,
+  SchemaDefinition,
+  ValidationError,
+  ValidationResult,
+  ValidationRule,
+  StringRule,
+  NumberRule,
+  BooleanRule,
+  ObjectRule,
+  ArrayRule,
+  EnumRule,
+  UnionRule,
+  LiteralRule,
+  SchemaRegistry,
+} from "./core/events/schemas";
+
+export {
+  createValidationMiddleware,
+  createSchemaMiddleware,
+  ValidationMiddleware,
+  type MiddlewareValidationConfig,
+  type SchemaMiddlewareConfig,
+} from "./core/middleware/validation";

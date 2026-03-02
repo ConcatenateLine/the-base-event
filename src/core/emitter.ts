@@ -18,7 +18,7 @@ import type {
 } from "./events/typing";
 
 import { BufferManager, createBufferManager } from "./buffer";
-import { isSSR, type Environment } from "./ssr/detection";
+import { isSSR } from "./ssr/detection";
 import {
   HydrationManager,
   type SSRConfig,
@@ -245,7 +245,6 @@ export class EventEmitter {
    * Process middleware chain
    */
   private async processMiddleware<T>(event: BaseEvent<T>): Promise<void> {
-    let index = 0;
     const next = async () => Promise.resolve();
 
     for (const middleware of this.middleware) {
@@ -257,7 +256,6 @@ export class EventEmitter {
         console.error("Error in middleware:", error);
         throw error;
       }
-      index++;
     }
   }
 
@@ -300,8 +298,6 @@ export class EventEmitter {
   private updateMetrics(
     operation: "emit" | "check" | "subscribe" | "unsubscribe"
   ): void {
-    const now = Date.now();
-
     switch (operation) {
       case "emit":
         this.metrics.eventsPerSecond++;

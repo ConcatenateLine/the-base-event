@@ -46,3 +46,41 @@ export {
 } from "./ssr/buffer-sync";
 
 export { ClientWaitManager } from "./ssr/client-wait";
+
+// Export schema validation
+export {
+  validate,
+  validateEventData,
+  isValid,
+  getGlobalRegistry,
+  createSchemaRegistry,
+  registerSchema,
+  createSchemaValidator,
+  SchemaValidationError,
+} from "./events/schemas";
+
+export type {
+  Schema,
+  SchemaDefinition,
+  ValidationError,
+  ValidationResult,
+  ValidationRule,
+  StringRule,
+  NumberRule,
+  BooleanRule,
+  ObjectRule,
+  ArrayRule,
+  EnumRule,
+  UnionRule,
+  LiteralRule,
+  SchemaRegistry,
+} from "./events/schemas";
+
+// Export validation middleware
+export {
+  createValidationMiddleware,
+  createSchemaMiddleware,
+  ValidationMiddleware,
+  type MiddlewareValidationConfig,
+  type SchemaMiddlewareConfig,
+} from "./middleware/validation";

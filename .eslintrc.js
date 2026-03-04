@@ -47,5 +47,7 @@ module.exports = {
     "**/*.js",
     "**/*.test.ts",
     "**/*.spec.ts",
+    "src/examples/**/*",
+    "src/migration/**/*",
   ],
 };

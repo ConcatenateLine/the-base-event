@@ -297,6 +297,14 @@ interface BaseEventConfig {
   - Manual verification is sufficient for this library's needs
 - **Future**: Can be re-evaluated if CI infrastructure matures
 
+[F] **Future: Complete Framework Adapter Tests**
+
+- **Current**: Adapter tests verify basic emit/subscribe but don't test framework-specific behavior
+- **Scope**: Add deeper integration tests for React re-renders, Vue reactivity, Angular DI/signals, Node.js clustering
+- **Approach**: Use framework-specific testing utilities (React Testing Library, Vue Test Utils, Angular TestBed)
+- **Priority**: Lower - adapters work correctly, tests are functional but shallow
+- **Future**: Can be implemented when demand emerges or as part of major version bump
+
 ---
 
 ## 🛠️ **Development Environment Setup**

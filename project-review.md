@@ -240,11 +240,11 @@ interface BaseEventConfig {
 
 **Week 11-12: Adapter Development**
 
-- [ ] React hook: useNotificationChannel
-- [ ] Angular service: NotificationService
-- [ ] Vue composable: useNotificationChannel
-- [ ] Node.js module for server-side usage
-- [ ] Adapter integration tests
+- [x] React hook: useNotificationChannel (`src/adapters/react/useNotificationChannel.ts`, `src/test/adapters/react-adapter.test.ts`)
+- [x] Angular service: NotificationService (`src/adapters/angular/notification.service.ts`, `src/test/adapters/angular-adapter.test.ts`)
+- [x] Vue composable: useNotificationChannel (`src/adapters/vue/useNotificationChannel.ts`, `src/test/adapters/vue-adapter.test.ts`)
+- [x] Node.js module for server-side usage (`src/adapters/node/index.ts`, `src/test/adapters/node-adapter.test.ts`)
+- [x] Adapter integration tests (`src/test/adapters/*.test.ts`, 55 tests passing)
 
 **Week 13-14: Migration & Documentation**
 

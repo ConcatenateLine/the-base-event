@@ -1,85 +1,85 @@
-import typescript from '@rollup/plugin-typescript';
-import { nodeResolve } from '@rollup/plugin-node-resolve';
-import commonjs from '@rollup/plugin-commonjs';
-import { terser } from 'rollup-plugin-terser';
-import pkg from './package.json';
+import typescript from "@rollup/plugin-typescript";
+import { nodeResolve } from "@rollup/plugin-node-resolve";
+import commonjs from "@rollup/plugin-commonjs";
+import terser from "@rollup/plugin-terser";
+import pkg from "./package.json" with { type: "json" };
 
-const external = ['events'];
+const external = ["events"];
 
 export default [
   // ES Module build
   {
-    input: 'src/index.ts',
+    input: "src/index.ts",
     output: {
       file: pkg.module,
-      format: 'es'
+      format: "es",
     },
     external,
     plugins: [
       nodeResolve({ preferBuiltins: false }),
       typescript({
-        tsconfig: './tsconfig.json',
+        tsconfig: "./tsconfig.json",
         declaration: true,
-        declarationDir: './dist',
-        rootDir: 'src'
-      })
-    ]
+        declarationDir: "./dist",
+        rootDir: "src",
+      }),
+    ],
   },
   // CommonJS build
   {
-    input: 'src/index.ts',
+    input: "src/index.ts",
     output: {
       file: pkg.main,
-      format: 'cjs'
+      format: "cjs",
     },
     external,
     plugins: [
       nodeResolve({ preferBuiltins: false }),
       typescript({
-        tsconfig: './tsconfig.json',
-        declaration: false
+        tsconfig: "./tsconfig.json",
+        declaration: false,
       }),
-      commonjs()
-    ]
+      commonjs(),
+    ],
   },
   // UMD build
   {
-    input: 'src/index.ts',
+    input: "src/index.ts",
     output: {
-      file: pkg.browser || 'dist/index.umd.js',
-      format: 'umd',
-      name: 'TheBaseEvent'
+      file: pkg.browser || "dist/index.umd.js",
+      format: "umd",
+      name: "TheBaseEvent",
     },
     external,
     plugins: [
       nodeResolve({ preferBuiltins: false }),
       typescript({
-        tsconfig: './tsconfig.json',
-        declaration: false
+        tsconfig: "./tsconfig.json",
+        declaration: false,
       }),
-      commonjs()
-    ]
+      commonjs(),
+    ],
   },
   // Minified versions
   {
-    input: 'src/index.ts',
+    input: "src/index.ts",
     output: {
-      dir: 'dist',
-      entryFileNames: '[name].min.[format]'
+      dir: "dist",
+      entryFileNames: "[name].min.[format]",
     },
     external,
     plugins: [
       nodeResolve({ preferBuiltins: false }),
       typescript({
-        tsconfig: './tsconfig.json',
-        declaration: false
+        tsconfig: "./tsconfig.json",
+        declaration: false,
       }),
       commonjs(),
       terser({
         compress: {
-          drop_console: true
-        }
-      })
-    ]
-  }
+          drop_console: true,
+        },
+      }),
+    ],
+  },
 ];

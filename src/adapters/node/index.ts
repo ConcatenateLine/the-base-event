@@ -69,12 +69,10 @@ function createServerEventEmitter(
       replay = true
     ) => {
       if (replay) {
-        const buffered = emitter.getBuffered(channel);
-        for (const event of buffered) {
-          callback(event as BaseEvent<T>);
-        }
+        return emitter.on<T>(channel, callback);
       }
-      return emitter.on<T>(channel, callback);
+      emitter.clear(channel);
+      return emitter.once<T>(channel, callback);
     },
     getBuffered: <T>(channel: string) =>
       emitter.getBuffered(channel) as BaseEvent<T>[],
@@ -101,11 +99,11 @@ export class NotificationChannel<T = unknown> {
   }
 
   subscribe(callback: EventCallback<T>, replay = true): UnsubscribeFunction {
-    if (replay) {
-      const buffered = this.emitter.getBuffered(this.channel);
-      for (const event of buffered) {
-        callback(event as BaseEvent<T>);
-      }
+    if (!replay) {
+      this.emitter.clear(this.channel);
+      const unsubscribe = this.emitter.once<T>(this.channel, callback);
+      this.subscriptions.push(unsubscribe);
+      return unsubscribe;
     }
 
     const unsubscribe = this.emitter.on<T>(this.channel, callback);

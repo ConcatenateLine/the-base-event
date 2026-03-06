@@ -15,7 +15,7 @@ import {
   type UnsubscribeFunction,
 } from "../../core";
 
-export interface UseNotificationChannelOptions<T> {
+export interface UseNotificationChannelOptions {
   channel: string;
   emitter?: EventEmitter;
   config?: EventEmitterConfig;
@@ -41,7 +41,7 @@ function subscribe<T>(
 }
 
 export function useNotificationChannel<T = unknown>(
-  options: UseNotificationChannelOptions<T>
+  options: UseNotificationChannelOptions
 ): NotificationChannelResult<T> {
   const { channel, emitter: providedEmitter, config, replay = true } = options;
 
@@ -49,7 +49,7 @@ export function useNotificationChannel<T = unknown>(
 
   const store = useSyncExternalStore(
     (onStoreChange: () => void): (() => void) => {
-      const callback: EventCallback<T> = (event): void => {
+      const callback: EventCallback<T> = (_event): void => {
         onStoreChange();
       };
 
@@ -146,4 +146,9 @@ export function useNotificationSubscription<T = unknown>(
 }
 
 export { EventEmitter, createEventEmitter };
-export type { EventEmitterConfig, BaseEvent, EventCallback, UnsubscribeFunction };
+export type {
+  EventEmitterConfig,
+  BaseEvent,
+  EventCallback,
+  UnsubscribeFunction,
+};

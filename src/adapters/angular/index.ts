@@ -8,13 +8,11 @@ export {
   NotificationModule,
   NOTIFICATION_SERVICE_CONFIG,
   NotificationService,
-  createNotificationService,
 } from "./module";
 
-export {
-  EventEmitter,
-  createEventEmitter,
-} from "../../core";
+export { createNotificationService } from "./notification.service";
+
+export { EventEmitter, createEventEmitter } from "../../core";
 
 export type {
   NotificationServiceConfig,

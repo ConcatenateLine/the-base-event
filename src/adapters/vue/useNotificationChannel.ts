@@ -5,7 +5,7 @@
  * @since 1.0.0
  */
 
-import { ref, reactive, onUnmounted, type Ref } from "vue";
+import { ref, onUnmounted, type Ref } from "vue";
 import {
   EventEmitter,
   createEventEmitter,
@@ -15,7 +15,7 @@ import {
   type UnsubscribeFunction,
 } from "../../core";
 
-export interface UseNotificationChannelOptions<T> {
+export interface UseNotificationChannelOptions {
   channel: string;
   emitter?: EventEmitter;
   config?: EventEmitterConfig;
@@ -32,7 +32,7 @@ export interface NotificationChannelReturn<T> {
 }
 
 export function useNotificationChannel<T = unknown>(
-  options: UseNotificationChannelOptions<T>
+  options: UseNotificationChannelOptions
 ): NotificationChannelReturn<T> {
   const { channel, emitter: providedEmitter, config, replay = true } = options;
 
@@ -43,7 +43,7 @@ export function useNotificationChannel<T = unknown>(
 
   const eventStore: BaseEvent<T>[] = [];
 
-  const callback: EventCallback<T> = (event) => {
+  const callback: EventCallback<T> = event => {
     eventStore.push(event);
     if (eventStore.length > 100) {
       eventStore.shift();
@@ -104,18 +104,13 @@ export interface UseNotificationSubscriptionOptions<T> {
 export function useNotificationSubscription<T = unknown>(
   options: UseNotificationSubscriptionOptions<T>
 ): Ref<BaseEvent<T> | null> {
-  const {
-    channel,
-    emitter: providedEmitter,
-    onEvent,
-    replay = true,
-  } = options;
+  const { channel, emitter: providedEmitter, onEvent, replay = true } = options;
 
   const emitter = providedEmitter ?? createEventEmitter();
 
   const lastEvent = ref<BaseEvent<T> | null>(null) as Ref<BaseEvent<T> | null>;
 
-  const callback: EventCallback<T> = (event) => {
+  const callback: EventCallback<T> = event => {
     lastEvent.value = event;
     if (onEvent) {
       onEvent(event);
@@ -145,4 +140,9 @@ export function useNotificationSubscription<T = unknown>(
 }
 
 export { EventEmitter, createEventEmitter };
-export type { EventEmitterConfig, BaseEvent, EventCallback, UnsubscribeFunction };
+export type {
+  EventEmitterConfig,
+  BaseEvent,
+  EventCallback,
+  UnsubscribeFunction,
+};

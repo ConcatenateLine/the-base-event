@@ -7,11 +7,10 @@
 
 import {
   NotificationService,
-  createNotificationService,
   type NotificationServiceConfig,
 } from "./notification.service";
 
-interface AngularInjectionToken<T> {
+interface AngularInjectionToken {
   ɵprov: unknown;
 }
 
@@ -21,7 +20,9 @@ interface NotificationServiceConfigToken {
   [Symbol]: unknown;
 }
 
-export const NOTIFICATION_SERVICE_CONFIG = "NOTIFICATION_SERVICE_CONFIG" as unknown as AngularInjectionToken<NotificationServiceConfig> & NotificationServiceConfigToken;
+export const NOTIFICATION_SERVICE_CONFIG =
+  "NOTIFICATION_SERVICE_CONFIG" as unknown as AngularInjectionToken &
+    NotificationServiceConfigToken;
 
 export const NotificationModule = {
   forRoot(config?: NotificationServiceConfig) {
@@ -47,6 +48,5 @@ export const NotificationModule = {
 
 export {
   NotificationService,
-  createNotificationService,
   type NotificationServiceConfig,
 } from "./notification.service";

@@ -2,6 +2,7 @@
 
 > Framework-agnostic event bus with intelligent replay and memory management
 
+[![npm version](https://img.shields.io/npm/v/the-base-event/beta.svg)](https://www.npmjs.com/package/the-base-event/v/beta)
 [![npm version](https://img.shields.io/npm/v/the-base-event.svg)](https://www.npmjs.com/package/the-base-event)
 [![npm downloads](https://img.shields.io/npm/dm/the-base-event.svg)](https://www.npmjs.com/package/the-base-event)
 [![Bundle size](https://img.shields.io/bundlephobia/minzip/the-base-event.svg)](https://bundlephobia.com/result?p=the-base-event)
@@ -36,18 +37,18 @@ pnpm add the-base-event
 ### Basic Usage
 
 ```typescript
-import { EventEmitter } from 'the-base-event';
+import { EventEmitter } from "the-base-event";
 
 // Create emitter with default configuration
 const emitter = new EventEmitter();
 
 // Subscribe to events
-const unsubscribe = emitter.on('user:login', (event) => {
-  console.log('User logged in:', event.payload);
+const unsubscribe = emitter.on("user:login", event => {
+  console.log("User logged in:", event.payload);
 });
 
 // Emit events
-emitter.emit('user:login', { userId: '123', timestamp: Date.now() });
+emitter.emit("user:login", { userId: "123", timestamp: Date.now() });
 
 // Cleanup when done
 unsubscribe();
@@ -56,21 +57,21 @@ unsubscribe();
 ### Advanced Configuration
 
 ```typescript
-import { EventEmitter } from 'the-base-event';
+import { EventEmitter } from "the-base-event";
 
 const emitter = new EventEmitter({
   buffer: {
-    strategy: 'lru',
+    strategy: "lru",
     maxSize: 1000,
-    ttl: 30000
+    ttl: 30000,
   },
   security: {
     sanitization: true,
-    rateLimit: { max: 1000, window: 1000 }
+    rateLimit: { max: 1000, window: 1000 },
   },
   performance: {
-    monitoring: true
-  }
+    monitoring: true,
+  },
 });
 ```
 
@@ -86,10 +87,11 @@ the-base-event/
 
 ## 📚 Documentation
 
-- [API Reference](./docs/api/README.md)
-- [Framework Guides](./docs/guides/)
-- [Migration Guide](./docs/migration/)
-- [Examples](./docs/examples/)
+- [API Reference](./docs/api/reference.md)
+- [Framework Guides](./docs/architecture/integration/)
+- [Migration Guide](./docs/migration/guide.md)
+- [Quick Start](./docs/guides/quickstart.md)
+- [DevTools Guide](./docs/devtools.md)
 
 ## 🧪 Testing
 

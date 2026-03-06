@@ -278,7 +278,7 @@ interface BaseEventConfig {
 **Week 17-18: Ecosystem Setup**
 
 - [x] GitHub repository with contribution guidelines (`CONTRIBUTING.md`)
-- [ ] NPM package publishing (`docs/publishing.md`)
+- [x] NPM package publishing (`docs/publishing.md`, npm: the-base-event@1.0.0)
 - [x] DevTools recommendations documentation (`docs/devtools.md`)
 - [x] Community issue templates and PR guidelines (`.github/ISSUE_TEMPLATE/`, `.github/PULL_REQUEST_TEMPLATE.md`)
 - [ ] Initial blog post and announcement

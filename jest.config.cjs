@@ -22,6 +22,7 @@ module.exports = {
   testTimeout: 10000,
   testPathIgnorePatterns: [
     "/node_modules/",
+    "src/test/benchmark/",
     "src/test/unit/buffer-manager.test.ts",
   ],
 };
